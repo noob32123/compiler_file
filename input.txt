@@ -1,0 +1,25 @@
+@start
+    str root_dir="D:\\testdir";
+    root_dir=(make root_dir+"test");
+    str txt_dir=(make root_dir+"initial.txt");
+    copy txt_dir,"D:\\test.txt";
+    delete "D:\\test.txt";
+    int i=1;
+    while(i<=9)
+    {
+        if(i!=8)
+        {
+            str cur_file=(make root_dir+"${i}.txt");
+            float f=i/7;
+            list to_be_written=["${f} ${f+3}","${f/8}","${f*5}",];
+            write cur_file,to_be_written,"\n","cover";
+            str data=(read cur_file,"\n",1);
+            list splited_data=(split data," ");
+            splited_data[1]=(compute splited_data[2]+"-"+splited_data[1]+"*"+splited_data[1]);
+            data=(aggregate splited_data,"1");
+            change cur_file,1,data;
+        }
+    }
+    print "finished!";
+@end
+
