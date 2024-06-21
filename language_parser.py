@@ -1,12 +1,7 @@
-import definition
+from Semanticer import *
 from definition import *
-from lexical_analysis import *
 
 class File_Process_Language_Syntaxerror(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-
-class File_Process_Language_Semanticerror(Exception):
     def __init__(self, message):
         super().__init__(message)
 
@@ -14,26 +9,37 @@ class Parser:
     def __init__(self,code_after_lex):
         self.code_after_lex=code_after_lex
         self.cur_pos=0
+        self.RPE_generator=Reverse_Polish_Expression_Generator()
 
     def FORMAT_STR_parser(self):
-        pass
+        self.RPE_generator.process_operand(self.code_after_lex[self.cur_pos])     #没有经过处理的模板字符串
 
     def LOOP_SENTENCE_parser(self):
         if self.code_after_lex[self.cur_pos][1]==reserved_dict["RESERVED_WHILE"]:
             self.cur_pos+=1
+            self.RPE_generator.process_operator(STARTJ_OPERATION_NUMBER)
+            print(self.RPE_generator.stack)
+            self.RPE_generator.finish_one_sentence()
             if self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_LPAREN"]:
+                self.RPE_generator.process_operator(self.code_after_lex[self.cur_pos][1])
                 self.cur_pos+=1
                 self.EXPRESSION_SENTENCE_parser()
                 if self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_RPAREN"]:
+                    self.RPE_generator.process_operator(self.code_after_lex[self.cur_pos][1])
                     self.cur_pos+=1
                 else:
                     raise File_Process_Language_Syntaxerror("<循环语句>语句缺少)")
                 if self.code_after_lex[self.cur_pos][1]==border_dict["BORDER_LCURLYBRASE"]:
+                    self.RPE_generator.process_operator(JFALSE_OPERATION_NUMBER)
+                    self.RPE_generator.finish_one_sentence()
                     self.cur_pos+=1
                 else:
                     raise File_Process_Language_Syntaxerror("<循环语句>语句缺少{")
                 self.SUB_BODY_parser()
                 if self.code_after_lex[self.cur_pos][1]==border_dict["BORDER_RCURLYBRASE"]:
+                    self.RPE_generator.process_operator(J_OPERATION_NUMBER)
+                    self.RPE_generator.process_operator(ENDJ_OPERATION_NUMBER)
+                    self.RPE_generator.finish_one_sentence()
                     self.cur_pos+=1
                 else:
                     raise File_Process_Language_Syntaxerror("<循环语句>语句缺少}")
@@ -47,18 +53,24 @@ class Parser:
         if self.code_after_lex[self.cur_pos][1]==reserved_dict["RESERVED_IF"]:
             self.cur_pos+=1
             if self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_LPAREN"]:
+                self.RPE_generator.process_operator(self.code_after_lex[self.cur_pos][1])
                 self.cur_pos+=1
                 self.EXPRESSION_SENTENCE_parser()
                 if self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_RPAREN"]:
+                    self.RPE_generator.process_operator(self.code_after_lex[self.cur_pos][1])
                     self.cur_pos+=1
                 else:
                     raise File_Process_Language_Syntaxerror("<分支语句>语句缺少)")
                 if self.code_after_lex[self.cur_pos][1]==border_dict["BORDER_LCURLYBRASE"]:
+                    self.RPE_generator.process_operator(JFALSE_OPERATION_NUMBER)
+                    self.RPE_generator.finish_one_sentence()
                     self.cur_pos+=1
                 else:
                     raise File_Process_Language_Syntaxerror("<分支语句>语句缺少{")
                 self.SUB_BODY_parser()
                 if self.code_after_lex[self.cur_pos][1]==border_dict["BORDER_RCURLYBRASE"]:
+                    self.RPE_generator.process_operator(ENDJ_OPERATION_NUMBER)
+                    self.RPE_generator.finish_one_sentence()
                     self.cur_pos+=1
                 else:
                     raise File_Process_Language_Syntaxerror("<分支语句>语句缺少}")
@@ -72,6 +84,7 @@ class Parser:
         if self.code_after_lex[self.cur_pos][1]==reserved_dict["RESERVED_COMPUTE"]:
             self.cur_pos+=1
             self.EXPRESSION_SENTENCE_parser()
+            self.RPE_generator.process_operator(reserved_dict["RESERVED_COMPUTE"])
             print("<其它命令>::=compute<表达式>")
         elif self.code_after_lex[self.cur_pos][1]==reserved_dict["RESERVED_SPLIT"]:
             self.cur_pos+=1
@@ -81,6 +94,7 @@ class Parser:
             else:
                 raise File_Process_Language_Syntaxerror("指令之间的参数需要,分隔")
             self.EXPRESSION_SENTENCE_parser()
+            self.RPE_generator.process_operator(reserved_dict["RESERVED_SPLIT"])
             print("<其它命令>::=split<表达式>,<表达式>")
         elif self.code_after_lex[self.cur_pos][1]==reserved_dict["RESERVED_AGGREGATE"]:
             self.cur_pos+=1
@@ -90,10 +104,12 @@ class Parser:
             else:
                 raise File_Process_Language_Syntaxerror("指令之间的参数需要,分隔")
             self.EXPRESSION_SENTENCE_parser()
+            self.RPE_generator.process_operator(reserved_dict["RESERVED_AGGREGATE"])
             print("<其它命令>::=aggregate<表达式>,<表达式>")
         elif self.code_after_lex[self.cur_pos][1]==reserved_dict["RESERVED_PRINT"]:
             self.cur_pos+=1
             self.EXPRESSION_SENTENCE_parser()
+            self.RPE_generator.process_operator(reserved_dict["RESERVED_PRINT"])
             print("<其它命令>::=print<表达式>")
         else:
             raise File_Process_Language_Syntaxerror("出现<其他命令>错误")
@@ -117,6 +133,7 @@ class Parser:
             else:
                 raise File_Process_Language_Syntaxerror("指令之间的参数需要,分隔")
             self.EXPRESSION_SENTENCE_parser()
+            self.RPE_generator.process_operator(reserved_dict["RESERVED_WRITE"])
             print("<文件读写命令>::=write<表达式>,<表达式>,<表达式>,<表达式>")
         elif self.code_after_lex[self.cur_pos][1]==reserved_dict["RESERVED_READ"]:
             self.cur_pos+=1
@@ -131,6 +148,7 @@ class Parser:
             else:
                 raise File_Process_Language_Syntaxerror("指令之间的参数需要,分隔")
             self.EXPRESSION_SENTENCE_parser()
+            self.RPE_generator.process_operator(reserved_dict["RESERVED_READ"])
             print("<文件读写命令>::=read<表达式>,<表达式>,<表达式>")
         elif self.code_after_lex[self.cur_pos][1]==reserved_dict["RESERVED_CHANGE"]:
             self.cur_pos+=1
@@ -145,6 +163,7 @@ class Parser:
             else:
                 raise File_Process_Language_Syntaxerror("指令之间的参数需要,分隔")
             self.EXPRESSION_SENTENCE_parser()
+            self.RPE_generator.process_operator(reserved_dict["RESERVED_CHANGE"])
             print("<文件读写命令>::=change<表达式>,<表达式>,<表达式>")
         else:
             raise File_Process_Language_Syntaxerror("出现<文件读写指令>错误")
@@ -153,6 +172,7 @@ class Parser:
         if self.code_after_lex[self.cur_pos][1]==reserved_dict["RESERVED_MAKE"]:
             self.cur_pos+=1
             self.EXPRESSION_SENTENCE_parser()
+            self.RPE_generator.process_operator(reserved_dict["RESERVED_MAKE"])
             print("<文件移动命令>::=make<表达式>")
         elif self.code_after_lex[self.cur_pos][1]==reserved_dict["RESERVED_COPY"]:
             self.cur_pos+=1
@@ -162,6 +182,7 @@ class Parser:
             else:
                 raise File_Process_Language_Syntaxerror("指令之间的参数需要,分隔")
             self.EXPRESSION_SENTENCE_parser()
+            self.RPE_generator.process_operator(reserved_dict["RESERVED_COPY"])
             print("<文件移动命令>::=copy<表达式>,<表达式>")
         elif self.code_after_lex[self.cur_pos][1]==reserved_dict["RESERVED_MOVE"]:
             self.cur_pos+=1
@@ -171,16 +192,19 @@ class Parser:
             else:
                 raise File_Process_Language_Syntaxerror("指令之间的参数需要,分隔")
             self.EXPRESSION_SENTENCE_parser()
+            self.RPE_generator.process_operator(reserved_dict["RESERVED_MOVE"])
             print("<文件移动命令>::=move<表达式>,<表达式>")
         elif self.code_after_lex[self.cur_pos][1]==reserved_dict["RESERVED_DELETE"]:
             self.cur_pos+=1
             self.EXPRESSION_SENTENCE_parser()
+            self.RPE_generator.process_operator(reserved_dict["RESERVED_DELETE"])
             print("<文件移动命令>::=delete<表达式>")
         else:
             raise File_Process_Language_Syntaxerror("出现<文件移动指令>错误")
 
     def STR_parser(self):
         if self.code_after_lex[self.cur_pos][1]==constant_dict["CONSTANT_STR"]:
+            self.RPE_generator.process_operand(self.code_after_lex[self.cur_pos])
             self.cur_pos+=1
             print("<字符串>::=<不变字符串>")
         elif self.code_after_lex[self.cur_pos][1]==constant_dict["FORMAT_STR"]:
@@ -205,9 +229,11 @@ class Parser:
 
     def ASSIGNMENT_SENTENCE_parser(self):
         if self.code_after_lex[self.cur_pos][1]==identifier_dict["IDENTIFIER"]:
+            self.RPE_generator.process_operand(self.code_after_lex[self.cur_pos])
             self.cur_pos+=1
             self.SUB_ASSIGNABLE_OBJECT_parser()
             if self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_ASSIGNMENT"]:
+                self.RPE_generator.process_operator(operator_dict["OPERATOR_ASSIGNMENT"])
                 self.cur_pos+=1
             else:
                 raise File_Process_Language_Syntaxerror("赋值语句缺少=")
@@ -218,6 +244,7 @@ class Parser:
 
     def SUB_EXPRESSION_parser(self):
         if self.code_after_lex[self.cur_pos][1] in OPERATOR_LIST:
+            self.RPE_generator.process_operator(self.code_after_lex[self.cur_pos][1])
             self.cur_pos+=1
             self.EXPRESSION_SENTENCE_parser()
             print("<子表达式>::=<运算符><表达式>")
@@ -232,15 +259,19 @@ class Parser:
             self.CONSTANT_parser()
             print("<表达式头>::=<常量>")
         elif self.code_after_lex[self.cur_pos][1]==identifier_dict["IDENTIFIER"]:
+            self.RPE_generator.process_operand(self.code_after_lex[self.cur_pos])
             self.cur_pos+=1
             self.SUB_ASSIGNABLE_OBJECT_parser()
             print("<表达式头>::=<变量名><子可赋值对象>")
         elif self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_LPAREN"]:
+            self.RPE_generator.process_operator(self.code_after_lex[self.cur_pos][1])
             self.cur_pos+=1
             self.COMMAND_SENTENCE_parser()
             if self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_RPAREN"]:
+                self.RPE_generator.process_operator(self.code_after_lex[self.cur_pos][1])
                 self.cur_pos+=1
                 print("<表达式头>::=(命令语句)")
+                self.RPE_generator.set_command_return_true()
                 return
             else:
                 raise File_Process_Language_Syntaxerror("缺少)")
@@ -275,24 +306,25 @@ class Parser:
         else:
             raise File_Process_Language_Syntaxerror("出现<列表内容>错误")
 
-
     def SUB_LIST_parser(self):
         if self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_RBRACKET"]:
             self.cur_pos+=1
+            self.RPE_generator.finish_list()
             print("<子列表常量>::=]")
         elif self.code_after_lex[self.cur_pos][1] in LIST_CONTAIN_FIRST_LIST:
             self.LIST_CONTAIN_parser()
             if self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_RBRACKET"]:
                 self.cur_pos+=1
+                self.RPE_generator.finish_list()
                 print("<子列表常量>::=<列表内容>]")
             else:
                 raise File_Process_Language_Syntaxerror("列表末尾缺少]")
         else:
             raise File_Process_Language_Syntaxerror("出现<子列表常量>错误")
 
-
     def CONSTANT_LIST_parser(self):
         if self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_LBRACKET"]:
+            self.RPE_generator.begin_list()
             self.cur_pos+=1
             self.SUB_LIST_parser()
             print("<列表常量>::=[子列表常量")
@@ -301,14 +333,18 @@ class Parser:
 
     def CONSTANT_NUM_parser(self):
         if self.code_after_lex[self.cur_pos][1]==constant_dict["CONSTANT_INT"]:
+            self.RPE_generator.process_operand(self.code_after_lex[self.cur_pos])
             self.cur_pos+=1
             print("<常数>::=<自然数>")
         elif self.code_after_lex[self.cur_pos][1]==constant_dict["CONSTANT_FLOAT"]:
+            self.RPE_generator.process_operand(self.code_after_lex[self.cur_pos])
             self.cur_pos+=1
-            print("<常数>::=-<常数>")
-        elif self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_MINUS"]:
-            self.CONSTANT_NUM_parser()
             print("<常数>::=<正浮点数>")
+        elif self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_MINUS"]:
+            self.cur_pos+=1
+            self.CONSTANT_NUM_parser()
+            self.RPE_generator.process_operand(MINUS_OPERATION_NUMBER)
+            print("<常数>::=-<常数>")
         else:
             raise File_Process_Language_Syntaxerror("出现<常数>错误")
 
@@ -329,10 +365,12 @@ class Parser:
         if self.code_after_lex[self.cur_pos][1] in SUB_ASSIGNABLE_OBJECT_FIRST_LIST:
             self.cur_pos+=1
             if self.code_after_lex[self.cur_pos][1]==constant_dict["CONSTANT_INT"]:
+                self.RPE_generator.process_operand(self.code_after_lex[self.cur_pos])
                 self.cur_pos+=1
             else:
                 raise File_Process_Language_Syntaxerror("缺少大于0的整数索引")
             if self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_RBRACKET"]:
+                self.RPE_generator.process_operator(INDEX_OPERATION_NUMBER)
                 self.cur_pos+=1
             else:
                 raise File_Process_Language_Syntaxerror("缺少]")
@@ -345,6 +383,8 @@ class Parser:
 
     def SUB_DECLARE_SENTENCE_parser(self):
         if self.code_after_lex[self.cur_pos][1]==operator_dict["OPERATOR_ASSIGNMENT"]:
+            self.RPE_generator.code.append(self.RPE_generator.last_process_variable)
+            self.RPE_generator.process_operator(self.code_after_lex[self.cur_pos][1])
             self.cur_pos+=1
             self.EXPRESSION_SENTENCE_parser()
             print("<子声明语句>::==<表达式>")
@@ -356,11 +396,14 @@ class Parser:
 
     def DECLARE_SENTENCE_parser(self):
         if self.code_after_lex[self.cur_pos][1] in DECLARE_SENTENCE_FIRST_LIST:
+            self.RPE_generator.process_operator(self.code_after_lex[self.cur_pos][1])
             self.cur_pos+=1  #数据类型
             if self.code_after_lex[self.cur_pos][1]==identifier_dict["IDENTIFIER"]:
+                self.RPE_generator.process_operand(self.code_after_lex[self.cur_pos])
                 self.cur_pos+=1
             else:
                 raise DECLARE_SENTENCE_FIRST_LIST("<声明语句>缺少<变量名>")
+            self.RPE_generator.finish_one_sentence()
             self.SUB_DECLARE_SENTENCE_parser()
         else:
             raise File_Process_Language_Syntaxerror("出现<声明语句>错误")
@@ -395,6 +438,7 @@ class Parser:
         if self.code_after_lex[self.cur_pos][1] in NORMAL_SENTENCE_FIRST_LIST:
             self.NORMAL_SENTENCE_parser()
             print("<语句>::=<普通语句>")
+            self.RPE_generator.finish_one_sentence()
         elif self.code_after_lex[self.cur_pos][1] in BRANCH_SENTENCE_FIRST_LIST:
             self.BRANCH_SENTENCE_parser()
             print("<语句>::=<循环语句>")
@@ -449,11 +493,3 @@ class Parser:
 
     def parse(self):
         self.PROGRAM_parser()
-
-
-file_processor=FileProcessor("./input.txt")
-lexical_analysor=Lexical_Analysor(file_processor.get_processed_file())
-lexical_analysor.lexical_analysis()
-# lexical_analysor.show_analyse_result()
-parser=Parser(lexical_analysor.already_processed_words)
-parser.parse()
